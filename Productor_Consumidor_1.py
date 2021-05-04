@@ -35,7 +35,7 @@ logging.basicConfig(format='%(asctime)s.%(msecs)03d [%(threadName)s] - %(message
     lista.append(dato)  # Si la lista tiene Numero_Maximo_Items termina el programa y da error.
 
 """
-
+numeraco = 0
 class listaFinita(list):
 
     def __init__(self, max_elementos):
@@ -66,29 +66,46 @@ class Productor(threading.Thread):
     def __init__(self, lista = listaFinita):
         super().__init__()
         self.lista = lista
+        self.lock = threading.Lock()
 
     def run(self):
+        global numeraco
         while True:
-            self.lista.append(random.randint(0,100))
-            logging.info(f'produjo el item: {self.lista[-1]}')
-            time.sleep(random.randint(1,5))
-
+            self.lock.acquire()
+            try:
+                if numeraco == 0:
+                    numeraco = 1
+                    self.lista.append(random.randint(0,100))
+                    logging.info(f'produjo el item: {self.lista[-1]}')
+                    time.sleep(random.randint(1,5))
+            finally:
+                self.lock.release()
 
 class Consumidor(threading.Thread):
-    def __init__(self, lista):
+    def __init__(self, lista = listaFinita):
         super().__init__()
         self.lista = lista
-
+        self.lock = threading.Lock()
 
     def run(self):
+        global numeraco
         while True:
-            elemento = self.lista.pop(0)
-            logging.info(f'consumio el item {elemento}')
-            time.sleep(random.randint(1,5))
+            self.lock.acquire()
+            try:
+                if numeraco == 1:
+                    numeraco = 0
+                    elemento = self.lista.pop(0)
+                    logging.info(f'consumio el item {elemento}')
+                    time.sleep(random.randint(1,5))
+            finally:
+                self.lock.release()
+
+
 
 def main():
     hilos = []
     lista = listaFinita(4)
+
 
     for i in range(4):
         productor = Productor(lista)
